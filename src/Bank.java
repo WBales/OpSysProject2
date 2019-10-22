@@ -1,3 +1,4 @@
+import javax.swing.plaf.SeparatorUI;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
@@ -19,8 +20,8 @@ public class Bank{
 
     public static Semaphore custReady = new Semaphore(0, true);
     public static Semaphore receipt = new Semaphore(0, true);
-    public static Semaphore mutex1 = new Semaphore(0, true);
-    public static Semaphore mutex2 = new Semaphore(0, true);
+    public static Semaphore loanMutex = new Semaphore(1, true);
+    public static Semaphore tellerMutex = new Semaphore(1, true);
     public static Semaphore bankProcessing = new Semaphore(1, true);
 
 
@@ -30,9 +31,12 @@ public class Bank{
     public static Semaphore tellers = new Semaphore(2, true);
 
     public static Queue<Customer> tellerLine = new LinkedList<>();
-    public static Semaphore[] tellerReady = new Semaphore[]{new Semaphore(1), new Semaphore(1)};
+    //public static Semaphore teller
+    //public static Semaphore[] tellerReady = new Semaphore[]{new Semaphore(1), new Semaphore(1)};
+    public static Semaphore tellerReady = new Semaphore(0, true);
+
     public static Queue<Customer> loanLine = new LinkedList<>();
-    public static Semaphore loanReady = new Semaphore(1, true);
+    public static Semaphore loanReady = new Semaphore(0, true);
 
     public static Semaphore bankQueueMutex = new Semaphore(1, true);
     public static Queue<Customer> bankQueue = new LinkedList<>();
@@ -108,51 +112,86 @@ public class Bank{
         int count = 0;
         boolean moreCustomers = true;
         while(moreCustomers) {
-            if (bankQueue.size() != 0) {
+            try {
+                custReady.acquire();
                 //Customer currentCustomer = bankQueue.remove();
-
+                System.out.println(bankQueue.size() + " bankQ");
+                if (bankQueue.size() != 0) {
+                    System.out.println(bankQueue.size());
+                }
 
                 if (bankQueue.peek().getTask() == 2) {
-                    loanLine.add(bankQueue.remove());
-                } else if (bankQueue.peek().getTask() == 0 || bankQueue.peek().getTask() == 1) {
-                    tellerLine.add(bankQueue.remove());
-                }
-
-                if (loanLine.size() != 0) {
                     try {
                         count++;
-                        loanReady.acquire();
-                        loanOfficer.customerAction(loanLine.peek().getValue(), loanLine.remove());
-                        //loanLineReady.release();
-
+                        System.out.println("Attempt to add loan");
+                        //bankQueueMutex.acquire();
+                        loanMutex.acquire();
+                        loanLine.add(bankQueue.remove());
+                        System.out.println("Added to loan q");
+                        loanMutex.release();
+                        //bankQueueMutex.release();
+                        loanReady.release();
                     } catch (InterruptedException e) {
 
                     }
-                }
-                if (tellerLine.size() != 0) {
+
+                } else if (bankQueue.peek().getTask() == 0 || bankQueue.peek().getTask() == 1) {
                     try {
-                        tellers.acquire();
-                        if (teller[0].getIsAvailable() == true) {
-                            count++;
-                            tellerReady[0].acquire();
-                            teller[0].customerAction(tellerLine.peek().getValue(), tellerLine.remove());
-                        } else if (teller[1].getIsAvailable() == true) {
-                            count++;
-                            tellerReady[1].acquire();
-                            teller[1].customerAction(tellerLine.peek().getValue(), tellerLine.remove());
-                        }
+                        count++;
+                        System.out.println("Attempt to add teller");
+                        //bankQueueMutex.acquire();
+                        tellerMutex.acquire();
+                        tellerLine.add(bankQueue.remove());
+                        System.out.println("Added to teller q");
+                        tellerMutex.release();
+                        //bankQueueMutex.release();
+                        tellerReady.release();
                     } catch (InterruptedException e) {
 
                     }
+                }
+                    /*
+                    if (loanLine.size() != 0) {
+                        try {
+                            count++;
+                            loanReady.acquire();
+                            loanOfficer.customerAction(loanLine.peek().getValue(), loanLine.remove());
+                            //loanLineReady.release();
 
-                    //System.out.println("Was for teller");
-                }
-                //System.out.println(count);
-                if (loanLine.size() == 0 && tellerLine.size() == 0 && bankQueue.size() == 0) {
-                    moreCustomers = false;
-                }
+                        } catch (InterruptedException e) {
+
+                        }
+                    }
+                    if (tellerLine.size() != 0) {
+                        try {
+                            tellers.acquire();
+                            if (teller[0].getIsAvailable() == true) {
+                                count++;
+                                tellerReady[0].acquire();
+                                teller[0].customerAction(tellerLine.peek().getValue(), tellerLine.remove());
+                            } else if (teller[1].getIsAvailable() == true) {
+                                count++;
+                                tellerReady[1].acquire();
+                                teller[1].customerAction(tellerLine.peek().getValue(), tellerLine.remove());
+                            }
+                        } catch (InterruptedException e) {
+
+                        }
+
+                        //System.out.println("Was for teller");
+                    }
+                    */
+                //System.out.println(bankQueue.size() + " at end"); //becomes 0, doesn't re enter
+            } catch (InterruptedException e){
+
             }
+            /*
+            if (loanLine.size() == 0 && tellerLine.size() == 0 && bankQueue.size() == 0) {
+                moreCustomers = false;
+            }
+            */
         }
+
 
         if(bankQueue.size() == 0){
             for(int i = 0; i < TOTAL_OFFICERS; i++){
@@ -164,10 +203,12 @@ public class Bank{
 
                 }
             }
-
+            System.out.println("teller close");
             for(int i = 0; i < TOTAL_TELLERS; i++){
                 try{
+                    System.out.println("stop");
                     teller[i].stop();
+                    System.out.println("join");
                     tellerThreads[i].join();
                     System.out.println("Teller " + i + " is joined by main");
                 } catch (InterruptedException e){

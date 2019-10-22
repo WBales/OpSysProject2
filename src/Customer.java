@@ -10,6 +10,7 @@ public class Customer implements Runnable {
     private int customerNum, task, value;
     //static Random rand = new Random();
     boolean isPending;
+    private Semaphore customerSem = new Semaphore(0, true);
 
     Customer(int num){
         customerNum = num;
@@ -62,13 +63,17 @@ public class Customer implements Runnable {
     */
 
     public void stop(){
-        isPending = false;
+        //isPending = false;
+        System.out.println("Stop " + customerNum);
+        customerSem.release();
     }
 
     public void run(){
         for(int i = 0; i < 3; i++){
             try{
-                isPending = true;
+                System.out.println("Started " + customerNum);
+                //customerSem.acquire();
+                //isPending = true;
                 task = Bank.rand.nextInt(3);
                 //task = 2;
                 if(task > 2 || task < 0){
@@ -81,13 +86,20 @@ public class Customer implements Runnable {
                     value = ((Bank.rand.nextInt(4) + 1) * -100);
                 }
                 //actions
-                Bank.bankQueueMutex.acquire();
+                Bank.bankQueueMutex.acquire();                          //This is the problem with bank.main
+                //System.out.println(customerNum + " added to bank q");
                 Bank.bankQueue.add(this);
+                //System.out.println(Bank.bankQueue.size() + " inner");
                 Bank.bankQueueMutex.release();
+                //System.out.println("released bankQueueMutex: " + Bank.bankQueueMutex);
+                Bank.custReady.release();
+                customerSem.acquire();
                 //Bank.makeRequest(this, value, task);
+                /*
                 while(isPending == true){
 
                 }
+                */
             } catch (InterruptedException e){
 
             }

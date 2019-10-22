@@ -14,7 +14,7 @@ public class Teller implements Runnable {
     public void customerAction(int amount, Customer customer){
             this.customer = customer;
             this.amount = amount;
-            Bank.tellerWindow[getTellerNum()].release();
+            //Bank.tellerWindow[getTellerNum()].release();
     }
 
     public void stop(){
@@ -49,30 +49,12 @@ public class Teller implements Runnable {
     public void run(){
         isRunning = true;
         while(isRunning){
-            /*
-            if(customer != null){
-                try{
-                    Bank.tellerWindow[tellerNum].acquire();
-                    startMessage();
-                    customer.requestTeller(this, amount);
-                    Bank.bankProcessing.acquire();
-                    changeBalance(amount);
-                    Bank.bankProcessing.release();
-                    Thread.sleep(2000);
-                    actionMessage();
-                    customer.tellerReceipt(this, amount);
-                    customer = null;
-                    customer.stop();
-                    Bank.tellerReady[tellerNum].release();
-                } catch (InterruptedException e){
-
-                }
-
-            }
-            */
             try{
-                Bank.tellerWindow[getTellerNum()].acquire();
-                isAvailable = false;
+                Bank.tellerReady.acquire();
+                Bank.tellerMutex.acquire();
+                System.out.println(Bank.tellerLine.size() + " Teller");
+                customerAction(Bank.tellerLine.peek().getValue(), Bank.tellerLine.remove());
+                Bank.tellerMutex.release();
                 startMessage();
                 customer.requestTeller(this, amount);
                 Bank.bankProcessing.acquire();
@@ -82,10 +64,9 @@ public class Teller implements Runnable {
                 actionMessage();
                 customer.tellerReceipt(this, amount);
                 customer.stop();
-                customer = null;
-                Bank.tellerReady[getTellerNum()].release();
-                Bank.tellers.release();
-                isAvailable = true;
+                //customer = null;
+                //Bank.tellerReady.release();
+                //Bank.tellers.release();
             } catch (InterruptedException e){
 
             }

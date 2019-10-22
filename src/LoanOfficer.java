@@ -11,7 +11,7 @@ public class LoanOfficer implements Runnable{
             this.customer = customer;
             this.amount = amount;
             //System.out.println("Sets customer in loan officer");
-            Bank.loanWindow.release();
+            //Bank.loanWindow.release();
     }
 
     public void startMessage(){
@@ -33,35 +33,14 @@ public class LoanOfficer implements Runnable{
 
     public void run(){
         isRunning = true;
-        //System.out.println("Actually runs");
-        /*
-        while(isRunning){
-            if(customer != null){
-                System.out.println("Recognizes customer");
-                try{
-                    startMessage();
-                    customer.requestOfficer(amount);
-                    Bank.bankProcessing.acquire();
-                    changeLoanAmount(amount);
-                    Bank.bankProcessing.release();
-                    //Thread.sleep(2000);
-                    actionMessage();
-                    customer.loanApproved();
-                    customer = null;
-                    customer.stop();
-                    Bank.loanLineReady.release();
-                } catch (InterruptedException e){
-
-                }
-
-            }
-        }
-        */
-
-        //System.out.println("Recognizes customer");
         while(isRunning){
             try{
-                Bank.loanWindow.acquire();           //Someone at the window
+                Bank.loanReady.acquire();
+                Bank.loanMutex.acquire();
+                System.out.println(Bank.loanLine.size() + " Loan Officer");
+                customerAction(Bank.loanLine.peek().getValue(), Bank.loanLine.remove());
+                Bank.loanMutex.release();
+                //Bank.loanWindow.acquire();           //Someone at the window
                 //System.out.println("Is Running");
                 startMessage();
                 customer.requestOfficer(amount);
@@ -73,7 +52,7 @@ public class LoanOfficer implements Runnable{
                 customer.loanApproved();
                 customer.stop();
                 //customer = null;
-                Bank.loanReady.release();
+                //Bank.loanReady.release();
             } catch (InterruptedException e){
 
             }
