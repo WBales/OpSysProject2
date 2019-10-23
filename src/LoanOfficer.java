@@ -10,8 +10,6 @@ public class LoanOfficer implements Runnable{
     public void customerAction(int amount, Customer customer){
             this.customer = customer;
             this.amount = amount;
-            //System.out.println("Sets customer in loan officer");
-            //Bank.loanWindow.release();
     }
 
     public void startMessage(){
@@ -23,7 +21,8 @@ public class LoanOfficer implements Runnable{
     }
 
     public void changeLoanAmount(int amount){
-        Bank.loanAmount[customer.getCustomerNum()] = Bank.balance[customer.getCustomerNum()] + amount;
+        //Updates bank balances. Semaphores are used in the run()
+        Bank.balance[customer.getCustomerNum()] = Bank.balance[customer.getCustomerNum()] + amount;
         Bank.loanAmount[customer.getCustomerNum()] = Bank.loanAmount[customer.getCustomerNum()] + amount;
     }
 
@@ -33,28 +32,27 @@ public class LoanOfficer implements Runnable{
 
     public void run(){
         isRunning = true;
+        outerloop:
         while(isRunning){
             try{
-                Bank.loanReady.acquire();
+                Bank.loanReady.acquire();               //Waits until a customer is available in line
                 Bank.loanMutex.acquire();
-                System.out.println(Bank.loanLine.size() + " Loan Officer");
-                customerAction(Bank.loanLine.peek().getValue(), Bank.loanLine.remove());
+                customerAction(Bank.loanLine.peek().getValue(), Bank.loanLine.remove()); //Critical - Officer is taking the next person in line
                 Bank.loanMutex.release();
-                //Bank.loanWindow.acquire();           //Someone at the window
-                //System.out.println("Is Running");
-                startMessage();
-                customer.requestOfficer(amount);
+                startMessage();                      //Officer is serving customer
+                customer.requestOfficer(amount);     //Customer makes request
                 Bank.bankProcessing.acquire();
-                changeLoanAmount(amount);
+                changeLoanAmount(amount);           //Critical - Officer is changing bank values
                 Bank.bankProcessing.release();
                 Thread.sleep(Bank.sleepRandom());
-                actionMessage();
-                customer.loanApproved();
-                customer.stop();
-                //customer = null;
-                //Bank.loanReady.release();
+                actionMessage();                //Officer has completed action
+                customer.loanApproved();        //Customer gets receipt
+                Bank.custCountMutex.acquire();
+                Bank.custCount++;               //Critical - Increment customer count
+                Bank.custCountMutex.release();
+                customer.stop();                 //releases the customer, might release bank main
             } catch (InterruptedException e){
-
+                break outerloop;
             }
         }
     }

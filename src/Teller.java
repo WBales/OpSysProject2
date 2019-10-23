@@ -1,10 +1,8 @@
-import java.util.Random;
-
 public class Teller implements Runnable {
 
-    Customer customer;
+    private Customer customer;
     private int amount, tellerNum;
-    private boolean isRunning, isAvailable = true;
+    private boolean isRunning;
 
     Teller (int num){
         tellerNum = num;
@@ -14,7 +12,6 @@ public class Teller implements Runnable {
     public void customerAction(int amount, Customer customer){
             this.customer = customer;
             this.amount = amount;
-            //Bank.tellerWindow[getTellerNum()].release();
     }
 
     public void stop(){
@@ -22,6 +19,7 @@ public class Teller implements Runnable {
     }
 
     public void changeBalance(int amount){
+        //Updates balance. Semaphore used in run()
         Bank.balance[customer.getCustomerNum()] = Bank.balance[customer.getCustomerNum()] + amount;
     }
 
@@ -41,34 +39,29 @@ public class Teller implements Runnable {
         }
     }
 
-    public boolean getIsAvailable(){
-        return isAvailable;
-    }
-
-
     public void run(){
         isRunning = true;
+        outerloop:
         while(isRunning){
             try{
-                Bank.tellerReady.acquire();
+                Bank.tellerReady.acquire();                                                  //Teller waiting for customer in line
                 Bank.tellerMutex.acquire();
-                System.out.println(Bank.tellerLine.size() + " Teller");
-                customerAction(Bank.tellerLine.peek().getValue(), Bank.tellerLine.remove());
+                customerAction(Bank.tellerLine.peek().getValue(), Bank.tellerLine.remove()); //Critical - Remove customer from line
                 Bank.tellerMutex.release();
-                startMessage();
-                customer.requestTeller(this, amount);
+                startMessage();                                 //Teller starts action
+                customer.requestTeller(this, amount);       //Customer makes request
                 Bank.bankProcessing.acquire();
-                changeBalance(amount);
+                changeBalance(amount);                        //Critical - Teller updated banks values
                 Bank.bankProcessing.release();
                 Thread.sleep(Bank.sleepRandom());
-                actionMessage();
-                customer.tellerReceipt(this, amount);
-                customer.stop();
-                //customer = null;
-                //Bank.tellerReady.release();
-                //Bank.tellers.release();
+                actionMessage();                              //Teller has completed action
+                customer.tellerReceipt(this, amount);   //Customer gets receipt
+                Bank.custCountMutex.acquire();
+                Bank.custCount++;              //Critical - Increment customer count
+                Bank.custCountMutex.release();
+                customer.stop();               //releases the customer, might release bank main
             } catch (InterruptedException e){
-
+                break outerloop;
             }
         }
     }
