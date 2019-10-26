@@ -16,30 +16,64 @@ public class Customer implements Runnable {
     public int getValue() {return value;}
 
     public void requestTeller(Teller teller, int amount){
+        //Request statements at teller
         if(amount > 0){
-            System.out.println("Customer " + customerNum + " requests of Teller" + teller.getTellerNum() + " to make a deposit of " + amount);
+            System.out.println("Customer " + customerNum + " requests of Teller " + teller.getTellerNum() + " to make a deposit of " + amount);
         } else {
-            System.out.println("Customer " + customerNum + " requests of Teller" + teller.getTellerNum() + " to make a withdrawal of " + (amount * -1));
+            System.out.println("Customer " + customerNum + " requests of Teller " + teller.getTellerNum() + " to make a withdrawal of " + (amount * -1));
+        }
+        try{
+            Thread.sleep(Bank.sleepTenthSeconds(1));
+        }
+        catch (InterruptedException e){
+
         }
     }
 
     public void tellerReceipt(Teller teller, int amount){
-        if(amount > 0){
-            System.out.println("Customer " + customerNum + " get cash and receipt from " + teller.getTellerNum());
+        //Receipt statements at teller
+        if(amount < 0){
+            System.out.println("Customer " + customerNum + " get cash and receipt from Teller " + teller.getTellerNum());
         } else {
-            System.out.println("Customer " + customerNum + " get receipt from " + teller.getTellerNum());
+            System.out.println("Customer " + customerNum + " get receipt from Teller " + teller.getTellerNum());
+        }
+        try{
+            Thread.sleep(Bank.sleepTenthSeconds(1));
+        }
+        catch (InterruptedException e){
+
         }
     }
 
+    public void leaveBank(){
+        //Leave bank
+        System.out.println("Customer " + customerNum + " departs the bank");
+    }
+
     public void requestOfficer(int amount){
+        //Request at loan officer
         System.out.println("Customer " + customerNum + " requests of loan officer to apply for a loan of " + amount);
+        try{
+            Thread.sleep(Bank.sleepTenthSeconds(1));
+        }
+        catch (InterruptedException e){
+
+        }
     }
 
     public void loanApproved (){
+        //Receipt at loan officer
         System.out.println("Customer " + customerNum + " gets loan from loan officer");
+        try{
+            Thread.sleep(Bank.sleepTenthSeconds(1));
+        }
+        catch (InterruptedException e){
+
+        }
     }
 
     public void stop(){
+        //Release customer and count to see if all customers have completed transactions
         if(Bank.custCount == 15){
             Bank.allCustomer.release();
         }
@@ -77,10 +111,11 @@ public class Customer implements Runnable {
             } catch (InterruptedException e){
 
             }
-
+            if(i == 2){
+                //Ensuring counting and exclusion is working as intended
+                //System.out.println("All visits for Customer" + customerNum);
+            }
         }
-
-
-
+        leaveBank();
     }
 }

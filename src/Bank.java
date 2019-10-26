@@ -4,7 +4,7 @@ import java.util.Random;
 import java.util.concurrent.Semaphore;
 
 public class Bank{
-
+    //With a few changes I should be able to have the numbers of customer/tellers/loan officers be passed in and the whole system be dynamic.
     static final int TOTAL_CUSTOMERS = 5;
     static final int TOTAL_TELLERS = 2;
     static final int TOTAL_OFFICERS = 1;
@@ -33,9 +33,11 @@ public class Bank{
 
     }
 
-    public static int sleepRandom(){
-        return rand.nextInt(2000) + 1000;
+
+    public static int sleepTenthSeconds(int i){
+        return (i * 100);
     }
+
 
     public static void main(String args[]){
         //Create Loan Officer Thread
@@ -67,6 +69,9 @@ public class Bank{
         try{
             allCustomer.acquire();
             if(custCount == 15){
+                //Removed per professor feedback. I've left the code so that you could see that I did originally include it.
+                //Feedback stated that threads that have the daemon set to true will close when the program closes.
+                /*
                 for(int i = 0; i < TOTAL_OFFICERS; i++){
                     try{
                         officerThread.interrupt();
@@ -85,22 +90,30 @@ public class Bank{
 
                     }
                 }
+                */
 
                 for(int i = 0; i < TOTAL_CUSTOMERS; i++){
                     try{
                         customerThreads[i].join();
-                        System.out.println("Customer " + i + " is joined by main");
+                        System.out.println("Customer " + i + " is joined by main"); //Not sure how to get the customer thread itself to print this with my design having main in a different class
                     } catch (InterruptedException e){
 
                     }
                 }
+                System.out.println();
                 //Output for summary table
-                System.out.printf("%35s%n", "Bank Simulation Summary");
-                System.out.printf("%18s %20s%n", "Ending", "Loan Amount");
+                System.out.printf("%35s%n%n", "Bank Simulation Summary");
+                System.out.printf("%26s %12s%n%n", "Ending Balance", "Loan Amount");
 
+                int totalBalance = 0;
+                int totalLoans = 0;
                 for (int i = 0; i < loanAmount.length; i++) {
+                    totalBalance = totalBalance + balance[i];
+                    totalLoans = totalLoans + loanAmount[i];
                     System.out.printf("%-11s %-15d %-10d%n", ("Customer " + i), balance[i], loanAmount[i]);
                 }
+                System.out.println();
+                System.out.printf("%-11s %-15s %-10d%n", "Totals", totalBalance, totalLoans);
             }
         } catch (InterruptedException e){
 

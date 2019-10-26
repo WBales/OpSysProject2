@@ -2,7 +2,6 @@ public class Teller implements Runnable {
 
     private Customer customer;
     private int amount, tellerNum;
-    private boolean isRunning;
 
     Teller (int num){
         tellerNum = num;
@@ -14,13 +13,15 @@ public class Teller implements Runnable {
             this.amount = amount;
     }
 
-    public void stop(){
-        isRunning = false;
-    }
-
     public void changeBalance(int amount){
         //Updates balance. Semaphore used in run()
         Bank.balance[customer.getCustomerNum()] = Bank.balance[customer.getCustomerNum()] + amount;
+        try{
+            Thread.sleep(Bank.sleepTenthSeconds(4));
+        }
+        catch (InterruptedException e){
+
+        }
     }
 
     public void startMessage(){
@@ -40,9 +41,7 @@ public class Teller implements Runnable {
     }
 
     public void run(){
-        isRunning = true;
-        outerloop:
-        while(isRunning){
+        while(true){
             try{
                 Bank.tellerReady.acquire();                                                  //Teller waiting for customer in line
                 Bank.tellerMutex.acquire();
@@ -53,15 +52,15 @@ public class Teller implements Runnable {
                 Bank.bankProcessing.acquire();
                 changeBalance(amount);                        //Critical - Teller updated banks values
                 Bank.bankProcessing.release();
-                Thread.sleep(Bank.sleepRandom());
                 actionMessage();                              //Teller has completed action
                 customer.tellerReceipt(this, amount);   //Customer gets receipt
                 Bank.custCountMutex.acquire();
                 Bank.custCount++;              //Critical - Increment customer count
-                Bank.custCountMutex.release();
                 customer.stop();               //releases the customer, might release bank main
+                Bank.custCountMutex.release();
+
             } catch (InterruptedException e){
-                break outerloop;
+
             }
         }
     }
